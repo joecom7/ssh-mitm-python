@@ -21,22 +21,19 @@ paramiko.util.log_to_file("sshserver.log")
 
 import os
 path = "logs"
-# Check whether the specified path exists or not
+# Check whether the log folder exists or not
 isExist = os.path.exists(path)
 if not isExist:
 
-   # Create a new directory because it does not exist
+   # Create the log folder directory
    os.makedirs(path)
 
 host_key = paramiko.RSAKey(filename="id_rsa")
-# host_key = paramiko.DSSKey(filename='test_dss.key')
 
 
-remotesshserver = "1.1.1.1"
+remotesshserver = "1.1.1.1" # will be set to the ip address of the remote ssh server
 
 class Server(paramiko.ServerInterface):
-    # 'data' is the output of base64.b64encode(key)
-    # (using the "user_rsa_key" files)
 
     def __init__(self,remotesshserver,db_name):
         self.remotesshserver = remotesshserver
@@ -92,7 +89,7 @@ class Server(paramiko.ServerInterface):
     def get_logger(self):
         return self.logger
     
-def handle_ssh_connection(client,server,db_name):
+def handle_ssh_connection(client,server,db_name,verbose):
     print("Got a connection!")
     try:
         t = paramiko.Transport(client)
@@ -130,7 +127,10 @@ def handle_ssh_connection(client,server,db_name):
                 else:
                     client_talking = True
                     if len(past_stream) != 0:
-                        logger.info("[server] " + past_stream.decode())
+                        log_message = "[server] " + past_stream.decode()
+                        logger.info(log_message)
+                        if verbose:
+                            print(log_message)
                     past_stream = x
                     
                 chan2.send(x)
@@ -143,14 +143,20 @@ def handle_ssh_connection(client,server,db_name):
                 else:
                     client_talking = False
                     if len(past_stream) != 0:
-                        logger.info("[client] " + past_stream.decode())
+                        log_message = "[client] " + past_stream.decode()
+                        logger.info(log_message)
+                        if verbose:
+                            print(log_message)
                     past_stream = x
                 chan.send(x)
         if len(past_stream) != 0:
             if client_talking:
-                logger.info("[client] " + past_stream.decode())
+                log_message = "[client] " + past_stream.decode()
             else:
-                logger.info("[server] " + past_stream.decode())
+                log_message = "[server] " + past_stream.decode()
+            logger.info(log_message)
+            if verbose:
+                print(log_message)
         server.event.wait(10)
         if not server.event.is_set():
             t.close()
@@ -165,7 +171,7 @@ def handle_ssh_connection(client,server,db_name):
         except:
             pass
 
-def serve_ssh(db_name):
+def serve_ssh(db_name,verbose):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -179,7 +185,7 @@ def serve_ssh(db_name):
         try:
             sock.listen(100)
             client, addr = sock.accept()
-            threading.Thread(target = handle_ssh_connection, args = (client,addr,db_name)).start()
+            threading.Thread(target = handle_ssh_connection, args = (client,addr,db_name,verbose)).start()
         except Exception as e:
             print("*** Listen/accept failed: " + str(e))
             traceback.print_exc()
