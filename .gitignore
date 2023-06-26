@@ -162,3 +162,5 @@ cython_debug/
 id_rsa
 id_rsa.pub
 *.pcap
+logs
+*.db

