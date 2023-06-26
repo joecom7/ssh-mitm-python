@@ -101,4 +101,4 @@ if __name__ == "__main__":
         try:
             ssh_mitm(target,gateway,db_name,args.verbose)
         except NotSudo as e:
-            print("this script must be run as root")
+            print("this script must be run as root to perform the attack. use the -l flag if you just want to read the collected credentials.")
