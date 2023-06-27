@@ -5,6 +5,7 @@ The sshmitm.py script executes an arp poisoning to become a MITM between a victi
 
 If the victim has never connected before to a ssh server with the same IP address, the attack will be successful unless the client checks the server fingerprint manually. If the victim has connected before to the server the ssh client will display a scary warning because it will detect a change in the server fingerprint.
 
+```
 usage: sudo python sshmitm.py [-h] [-t TARGET] [-g GATEWAY] [-d DB] [-l] [-u USERNAME] [-s SSHMACHINE] [-v]
 
 options:
@@ -20,3 +21,4 @@ options:
   -s SSHMACHINE, --sshmachine SSHMACHINE
                         filter the collected credentials by the IP address of the remote SSH machine
   -v, --verbose         send all the communication between the victim and the ssh machine to the stdout
+```
