@@ -103,8 +103,10 @@ def handle_ssh_connection(client,server,db_name,verbose):
         try:
             t.start_server(server=server)
         except paramiko.SSHException:
-            print("*** SSH negotiation failed.")
+            print("*** Autenticazione fallita.")
             return
+        except Exception as e:
+            print("*** Il client si e' disconnesso.")
 
         # wait for auth
         chan = t.accept(20)

