@@ -5,8 +5,18 @@ The sshmitm.py script executes an arp poisoning to become a MITM between a victi
 
 If the victim has never connected before to a ssh server with the same IP address, the attack will be successful unless the client checks the server fingerprint manually. If the victim has connected before to the server the ssh client will display a scary warning because it will detect a change in the server fingerprint.
 
+## usage
+Create the ssh server log file so the current user has write permission.
 ```
-usage: sshmitm.py [-h] [-t TARGET] [-g GATEWAY] [-d DB] [-l] [-u USERNAME]
+touch sshserver.log
+```
+Generate a RSA key pair.
+```
+ssh-keygen -f ./id_rsa
+```
+Use the script with the following syntax. If you want to perform the attack you must run the script as root.
+```
+usage: [sudo] python sshmitm.py [-h] [-t TARGET] [-g GATEWAY] [-d DB] [-l] [-u USERNAME]
                   [-s SSHMACHINE] [-v]
 
 options:
